@@ -1,61 +1,54 @@
-if(__name__ == "__main__"):
-    exit()
+from pathlib import Path
 
 
 class DataHandler:
+    """Read the historical text dataset, with optional training-trace output."""
 
-        def __init__(self,path):
-            self.__DataFolderPath=path
-            self.__Topology=[]
-            self.__numberOfTestCases=0
-            self.__passNumber=0
-            self.__Lines=[]
+    def __init__(self, path, write_output=True):
+        self.__DataFolderPath = Path(path)
+        self.__write_output = write_output
+        self.__Topology = []
+        self.__numberOfTestCases = 0
+        self.__passNumber = 0
+        self.__Lines = []
 
+    def read(self):
+        self.__Lines = (
+            self.__DataFolderPath / "inputs.txt"
+        ).read_text(encoding="utf-8").splitlines(keepends=True)
+        header = self.__Lines.pop(0).replace("Topology: ", "").split()
+        self.__numberOfTestCases = int(header.pop())
+        self.__Topology = [int(value) for value in header]
+        self.__passNumber = 0
+        if self.__write_output:
+            (self.__DataFolderPath / "outputs.txt").write_text("", encoding="utf-8")
 
-        def read(self):
-            file=open(self.__DataFolderPath+"\\inputs.txt",'r')
-            open(self.__DataFolderPath+"\\outputs.txt",'w+').write('')
-            self.__Lines=file.readlines()
-            str=self.__Lines.pop(0)
-            str=str.replace("Topology: ",'')
-            str=str.split(" ")
-            self.__numberOfTestCases=int(str.pop())
-            for s in str:
-                self.__Topology.append(int(s))
+    def __append_output(self, text):
+        if self.__write_output:
+            with (self.__DataFolderPath / "outputs.txt").open(
+                "a", encoding="utf-8"
+            ) as output:
+                output.write(text)
 
-        def nextInputs(self):
-            str=self.__Lines.pop(0)
-            file=open(self.__DataFolderPath+"\\outputs.txt",'a+')
-            file.write(f"Pass {self.__passNumber}:\n{str}")
-            str=str.replace("In: ",'')
-            str=str.split(" ")
-            Inputs=[]
-            for s in str:
-                Inputs.append(float(s))
-            return Inputs
+    def nextInputs(self):
+        line = self.__Lines.pop(0)
+        self.__append_output(f"Pass {self.__passNumber}:\n{line}")
+        return [float(value) for value in line.replace("In: ", "").split()]
 
-        def nextTargets(self):
-            str=self.__Lines.pop(0)
-            file=open(self.__DataFolderPath+"\\outputs.txt",'a+')
-            file.write(f"{str}")
-            str=str.replace("Target: ",'')
-            str=str.split(" ")
-            Targets=[]
-            for s in str:
-                Targets.append(float(s))
-            self.__passNumber+=1
-            return Targets
+    def nextTargets(self):
+        line = self.__Lines.pop(0)
+        self.__append_output(line)
+        self.__passNumber += 1
+        return [float(value) for value in line.replace("Target: ", "").split()]
 
-        def writeResults(self,Results,AvgError):
-            file=open(self.__DataFolderPath+"\\outputs.txt",'a+')
-            file.write("\nResults: ")
-            for i,r in enumerate(Results):
-                file.write(f"{i+1}:{r}")
-            file.write(f"\nAvgError:{AvgError}\n\n")
+    def writeResults(self, Results, AvgError):
+        results = "".join(f"{i + 1}:{result}" for i, result in enumerate(Results))
+        self.__append_output(f"\nResults: {results}\nAvgError:{AvgError}\n\n")
 
-        @property
-        def Topology(self):
-            return self.__Topology
-        @property
-        def NumberOfTestCases(self):
-            return self.__numberOfTestCases
+    @property
+    def Topology(self):
+        return self.__Topology
+
+    @property
+    def NumberOfTestCases(self):
+        return self.__numberOfTestCases
